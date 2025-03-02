@@ -12,5 +12,6 @@
   "function-runtime": "dotnet8",
   "function-memory-size": 512,
   "function-timeout": 30,
-  "function-handler": "Awstestingyml::Awstestingyml.Function::FunctionHandler"
+  "function-handler": "Awstestingyml::Awstestingyml.Function::FunctionHandler",
+  "role": "arn:aws:iam::767397779457:role/Aws_lambda_github_actions"
 }
