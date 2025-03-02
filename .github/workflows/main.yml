@@ -3,7 +3,7 @@ name: Test Lambda Deployment (.NET 8)
 on: [push]
 
 env:
-  AWS_REGION: 'us-east-1'
+  AWS_REGION: 'ap-south-1'
   LAMBDA_NAME: 'Awstestingyml'
   ENV_VAR_1: "GitHubActionValue1"  # Example environment variable
   ENV_VAR_2: "GitHubActionValue2"  # Example environment variable
