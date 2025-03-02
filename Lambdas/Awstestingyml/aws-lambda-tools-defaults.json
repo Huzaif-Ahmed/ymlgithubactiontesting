@@ -5,13 +5,11 @@
     "dotnet lambda help",
     "All the command line options for the Lambda command can be specified in this file."
   ],
-  "profile": "profile22",
   "region": "ap-south-1",
   "configuration": "Release",
   "function-architecture": "x86_64",
   "function-runtime": "dotnet8",
   "function-memory-size": 512,
   "function-timeout": 30,
-  "function-handler": "Awstestingyml::Awstestingyml.Function::FunctionHandler",
-  "role": "arn:aws:iam::767397779457:role/Aws_lambda_github_actions"
+  "function-handler": "Awstestingyml::Awstestingyml.Function::FunctionHandler"
 }
