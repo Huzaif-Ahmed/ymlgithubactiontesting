@@ -35,7 +35,7 @@ jobs:
 
     - name: Deploy Lambda with Environment Variables
       run: |
-        cd lambdas/Awstestingyml
+        cd Lambdas/Awstestingyml
         dotnet lambda deploy-function ${{ env.LAMBDA_NAME }} \
           --function-runtime dotnet8 \
           --region ${{ env.AWS_REGION }} \
