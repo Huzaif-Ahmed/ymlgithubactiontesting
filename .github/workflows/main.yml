@@ -1,0 +1,65 @@
+name: Test Lambda Deployment (.NET 8)
+
+on: [push]
+
+env:
+  AWS_REGION: 'us-east-1'
+  LAMBDA_NAME: 'Awstestingyml'
+  ENV_VAR_1: "GitHubActionValue1"  # Example environment variable
+  ENV_VAR_2: "GitHubActionValue2"  # Example environment variable
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Install Lambda Tools
+      run: |
+        dotnet tool install -g Amazon.Lambda.Tools
+        echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Deploy Lambda with Environment Variables
+      run: |
+        cd lambdas/EnvTest
+        dotnet lambda deploy-function ${{ env.LAMBDA_NAME }} \
+          --function-runtime dotnet8 \
+          --region ${{ env.AWS_REGION }} \
+          --disable-interactive true \
+          --environment-variables "ENV_VAR_1=${{ env.ENV_VAR_1 }},ENV_VAR_2=${{ env.ENV_VAR_2 }}"
+
+    - name: Invoke Lambda
+      id: invoke
+      run: |
+        response=$(aws lambda invoke \
+          --function-name ${{ env.LAMBDA_NAME }} \
+          --region ${{ env.AWS_REGION }} \
+          --payload '{}' \
+          output.txt)
+        
+        cat output.txt
+        echo "response=$(cat output.txt)" >> $GITHUB_OUTPUT
+        
+    - name: Verify Response
+      run: |
+        echo "${{ steps.invoke.outputs.response }}"
+        if echo "${{ steps.invoke.outputs.response }}" | grep -q '"ENV_VAR_1":"GitHubActionValue1"'; then
+          echo "Environment variables verified!"
+        else
+          echo "Environment variable check failed"
+          exit 1
+        fi
