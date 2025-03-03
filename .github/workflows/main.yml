@@ -27,13 +27,11 @@ jobs:
         echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
     - name: Configure AWS Credentials
-      uses: aws-actions/setup-sam@v1
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
-        role-to-assume : arn:aws:iam::767397779457:role/Aws_lambda_github_actions
 
     - name: Deploy Lambda with Environment Variables
       run: |
@@ -53,7 +51,6 @@ jobs:
           --region ${{ env.AWS_REGION }} \
           --payload '{}' \
           output.txt)
-        
         cat output.txt
         echo "response=$(cat output.txt)" >> $GITHUB_OUTPUT
         
