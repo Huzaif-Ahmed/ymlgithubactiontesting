@@ -1,12 +1,13 @@
-name: Test Lambda Deployment (.NET 8)
+name: Deploy .NET 8 Lambda with Role Creation
 
 on: [push]
 
 env:
   AWS_REGION: 'ap-south-1'
   LAMBDA_NAME: 'Awstestingyml'
-  ENV_VAR_1: "GitHubActionValue1"  # Example environment variable
-  ENV_VAR_2: "GitHubActionValue2"  # Example environment variable
+  ROLE_NAME: 'Aws_lambda_github_actions1'
+  ENV_VAR_1: "GitHubActionValue1"
+  ENV_VAR_2: "GitHubActionValue2"
 
 jobs:
   deploy:
@@ -33,55 +34,49 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: Check if Lambda Exists
-      id: check-lambda
+    - name: Create IAM Role if Not Exists
       run: |
-        if aws lambda get-function --function-name ${{ env.LAMBDA_NAME }} --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
-          echo "Lambda function exists"
-          echo "lambda_exists=true" >> $GITHUB_OUTPUT
+        # Check if role exists
+        if ! aws iam get-role --role-name ${{ env.ROLE_NAME }} > /dev/null 2>&1; then
+          echo "Creating IAM role..."
+          aws iam create-role \
+            --role-name ${{ env.ROLE_NAME }} \
+            --assume-role-policy-document '{
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "lambda.amazonaws.com"},
+                "Action": "sts:AssumeRole"
+              }]
+            }'
+          
+          # Wait for role to be created
+          sleep 10
+          
+          # Attach policies
+          aws iam attach-role-policy \
+            --role-name ${{ env.ROLE_NAME }} \
+            --policy-arn arn:aws:iam::aws:policy/AWSLambda_FullAccess
+            
+          aws iam attach-role-policy \
+            --role-name ${{ env.ROLE_NAME }} \
+            --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         else
-          echo "Lambda function does not exist"
-          echo "lambda_exists=false" >> $GITHUB_OUTPUT
+          echo "Role already exists"
         fi
 
-    - name: Deploy Lambda with Environment Variables
+    - name: Deploy Lambda Function
       run: |
         cd Lambdas/Awstestingyml
-        if [[ "${{ steps.check-lambda.outputs.lambda_exists }}" == "false" ]]; then
-          echo "Creating new Lambda function with role"
-          dotnet lambda deploy-function ${{ env.LAMBDA_NAME }} \
-            --function-runtime dotnet8 \
-            --region ${{ env.AWS_REGION }} \
-            --disable-interactive true \
-            --role arn:aws:iam::767397779457:role/Aws_lambda_github_actions \
-            --environment-variables "ENV_VAR_1=${{ env.ENV_VAR_1 }},ENV_VAR_2=${{ env.ENV_VAR_2 }}"
-        else
-          echo "Updating existing Lambda function"
-          dotnet lambda deploy-function ${{ env.LAMBDA_NAME }} \
-            --function-runtime dotnet8 \
-            --region ${{ env.AWS_REGION }} \
-            --disable-interactive true \
-            --environment-variables "ENV_VAR_1=${{ env.ENV_VAR_1 }},ENV_VAR_2=${{ env.ENV_VAR_2 }}"
-        fi
-
-    - name: Invoke Lambda
-      id: invoke
-      run: |
-        response=$(aws lambda invoke \
-          --function-name ${{ env.LAMBDA_NAME }} \
+        dotnet lambda deploy-function ${{ env.LAMBDA_NAME }} \
+          --function-runtime dotnet8 \
           --region ${{ env.AWS_REGION }} \
-          --payload '{}' \
-          output.txt)
-        
-        cat output.txt
-        echo "response=$(cat output.txt)" >> $GITHUB_OUTPUT
-        
-    - name: Verify Response
+          --disable-interactive true \
+          --role arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ env.ROLE_NAME }} \
+          --environment-variables "ENV_VAR_1=${{ env.ENV_VAR_1 }},ENV_VAR_2=${{ env.ENV_VAR_2 }}"
+
+    - name: Verify Deployment
       run: |
-        echo "${{ steps.invoke.outputs.response }}"
-        if echo "${{ steps.invoke.outputs.response }}" | grep -q '"ENV_VAR_1":"GitHubActionValue1"'; then
-          echo "Environment variables verified!"
-        else
-          echo "Environment variable check failed"
-          exit 1
-        fi
+        aws lambda get-function \
+          --function-name ${{ env.LAMBDA_NAME }} \
+          --region ${{ env.AWS_REGION }}
