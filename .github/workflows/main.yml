@@ -33,15 +33,36 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
+    - name: Check if Lambda Exists
+      id: check-lambda
+      run: |
+        if aws lambda get-function --function-name ${{ env.LAMBDA_NAME }} --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
+          echo "Lambda function exists"
+          echo "lambda_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "Lambda function does not exist"
+          echo "lambda_exists=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Deploy Lambda with Environment Variables
       run: |
         cd Lambdas/Awstestingyml
-        dotnet lambda deploy-function ${{ env.LAMBDA_NAME }} \
-          --function-runtime dotnet8 \
-          --region ${{ env.AWS_REGION }} \
-          --disable-interactive true \
-          --role arn:aws:iam::767397779457:role/Aws_lambda_github_actions \
-          --environment-variables "ENV_VAR_1=${{ env.ENV_VAR_1 }},ENV_VAR_2=${{ env.ENV_VAR_2 }}"
+        if [[ "${{ steps.check-lambda.outputs.lambda_exists }}" == "false" ]]; then
+          echo "Creating new Lambda function with role"
+          dotnet lambda deploy-function ${{ env.LAMBDA_NAME }} \
+            --function-runtime dotnet8 \
+            --region ${{ env.AWS_REGION }} \
+            --disable-interactive true \
+            --role arn:aws:iam::767397779457:role/Aws_lambda_github_actions \
+            --environment-variables "ENV_VAR_1=${{ env.ENV_VAR_1 }},ENV_VAR_2=${{ env.ENV_VAR_2 }}"
+        else
+          echo "Updating existing Lambda function"
+          dotnet lambda deploy-function ${{ env.LAMBDA_NAME }} \
+            --function-runtime dotnet8 \
+            --region ${{ env.AWS_REGION }} \
+            --disable-interactive true \
+            --environment-variables "ENV_VAR_1=${{ env.ENV_VAR_1 }},ENV_VAR_2=${{ env.ENV_VAR_2 }}"
+        fi
 
     - name: Invoke Lambda
       id: invoke
