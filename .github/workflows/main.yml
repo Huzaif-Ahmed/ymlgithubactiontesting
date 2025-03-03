@@ -5,8 +5,8 @@ on: [push]
 env:
   AWS_REGION: 'ap-south-1'
   LAMBDA_NAME: 'Awstestingyml'
-  ENV_VAR_1: "GitHubActionValue1"  # Example environment variable
-  ENV_VAR_2: "GitHubActionValue2"  # Example environment variable
+  ENV_VAR_1: "GitHubActionValue1"  
+  ENV_VAR_2: "GitHubActionValue2"  
 
 jobs:
   deploy:
@@ -28,11 +28,12 @@ jobs:
 
     - name: Configure AWS Credentials
       uses: aws-actions/setup-sam@v1
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v3
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
+        role-to-assume : arn:aws:iam::767397779457:role/Aws_lambda_github_actions
 
     - name: Deploy Lambda with Environment Variables
       run: |
